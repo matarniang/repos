@@ -1,5 +1,4 @@
 package com.spring.verification.springbackendverification.security.config;
-
 import com.spring.verification.springbackendverification.security.PasswordEncoder;
 import com.spring.verification.springbackendverification.service.MaladoUserService;
 import org.springframework.context.annotation.Bean;
@@ -27,7 +26,7 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
         httpSecurity
                     .csrf().disable()
                     .authorizeRequests()
-                    .antMatchers("/api/v*/registration/**", "/h2/**", "/h2/*", "/h2-console/**", "/h2-console/*")
+                    .antMatchers("/api/**", "/h2/**", "/h2/*", "/h2-console/**", "/h2-console/*")
                     .permitAll()
                     .anyRequest()
                     .authenticated()

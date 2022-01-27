@@ -6,20 +6,29 @@ import com.spring.verification.springbackendverification.model.AppUser;
 //import com.spring.verification.springbackendverification.model.RegistrationRequest;
 import com.spring.verification.springbackendverification.repository.AppUserRepository;
 import com.spring.verification.springbackendverification.security.EmailValidator;
+import com.spring.verification.springbackendverification.security.LoginadValidator;
+import com.spring.verification.springbackendverification.security.Message;
 import com.spring.verification.springbackendverification.security.PasswordEncoder;
 import com.spring.verification.springbackendverification.security.token.ConfirmationToken;
 import com.spring.verification.springbackendverification.security.token.ConfirmationTokenService;
 
+
 //import springbackendverification.service.AppUser;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
+
+import javax.servlet.http.HttpServletRequest;
 
 @Service
 public class MaladoUserService implements UserDetailsService {
@@ -28,94 +37,81 @@ public class MaladoUserService implements UserDetailsService {
     private final PasswordEncoder passwordEncoder;
     private final EmailSender emailSender;
     private final EmailValidator emailValidator;
+    private final LoginadValidator loginadValidator;
     private final ConfirmationTokenService confirmationTokenService;
-
     @Autowired
-    public MaladoUserService(AppUserRepository appUserRepository,EmailSender emailSender,PasswordEncoder passwordEncoder,EmailValidator emailValidator, ConfirmationTokenService confirmationTokenService) {
-        this.appUserRepository = appUserRepository;
+    public MaladoUserService(LoginadValidator loginadValidator,AppUserRepository appUserRepository,EmailSender emailSender,PasswordEncoder passwordEncoder,EmailValidator emailValidator, ConfirmationTokenService confirmationTokenService) {
+        this.loginadValidator =loginadValidator;
+    	this.appUserRepository = appUserRepository;
         this.emailSender= emailSender;
         this.passwordEncoder = passwordEncoder;
         this.emailValidator = emailValidator;
         this.confirmationTokenService = confirmationTokenService;
     }
-
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
         return appUserRepository.findByEmail(email)
                                 .orElseThrow(() -> new UsernameNotFoundException(String.format("User with email %s not found", email)));
     }
-
-    public String loginUpUser(String request){
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	public ResponseEntity<?> loginUpUser(String request, HttpServletRequest httprequest){
     	AppUser appUser = appUserRepository.getUser(request);
-    	System.out.print(appUser);
-//        boolean userExists = appUserRepository.findByEmail(appUser.getEmail()).isPresent();
         boolean userExists = appUserRepository.findByLoginad(request).isPresent();
-        System.out.print(userExists);
-        
-        boolean tmc_prefixe = emailValidator.startsWith_tmc(request);
-        boolean stg_prefixe = emailValidator.startsWith_stg(request);
-        
+        boolean tmc_prefixe = loginadValidator.startsWith_tmc(request);
+        boolean stg_prefixe = loginadValidator.startsWith_stg(request);
         if ((tmc_prefixe)||(stg_prefixe)) {
-        	
             if (userExists==true) {
                 AppUser appUserPrevious =  appUserRepository.findByLoginad(appUser.getLoginad()).get();
-//                AppUser appUserPrevious =  appUserRepository.findByEmail(eappUser.getEmail()).get();
-                
                 Boolean isEnabled = appUserPrevious.getEnabled();
-//                if (appUserPrevious!=null) {
                     if (!isEnabled) {
                         boolean isValidEmail = emailValidator.test(appUser.getEmail());
                     	if (isValidEmail) {
                             String token = UUID.randomUUID().toString();
-                            //A method to save user and token in this class
-                            saveConfirmationToken(appUserPrevious, token);                            
-                            String link = "http://localhost:8080/api/v1/registration/confirm?token=" + token;
+                            saveConfirmationToken(appUserPrevious, token);    
+                            persistToken(token, httprequest);
+                            String link = "http://localhost:8080/api/confirm?token=" + token;
                             emailSender.sendEmail(appUser.getEmail(), buildEmail(appUser.getLastName(),appUser.getFirstName(), link));
-                            return token;
+                            return new ResponseEntity(new Message("Verifie your emai",HttpStatus.OK.value()), HttpStatus.OK);
                     	}
-                    	
-                    	return String.format("email  is not valide ");
+                    	return new ResponseEntity(new Message(" email is not valide ",HttpStatus.OK.value()), HttpStatus.OK);
                     }
-                   return String.format("User with email %s Connected !!!!", appUser.getEmail());
-//                }
-//                return String.format(" %s does not existe in database",request);
+                    return new ResponseEntity(new Message(String.format("User with %s Connected", appUser.getEmail()),HttpStatus.OK.value()), HttpStatus.OK);
            }
-            return String.format(" %s loginAD does not existe in database",request);
+            return new ResponseEntity(new Message(String.format("%s does not existe in database",request),HttpStatus.NOT_FOUND.value()), HttpStatus.NOT_FOUND);
         }
-        return String.format("Please verif your loginAD format : STG_***** || TMC_*****");
+        return new ResponseEntity(new Message( String.format("Please verif your loginAD format"),HttpStatus.NOT_ACCEPTABLE.value()), HttpStatus.NOT_ACCEPTABLE);
     }
-    
     public String signUpUser(AppUser appUser) {
         boolean userExists = appUserRepository.findByEmail(appUser.getEmail()).isPresent();
-        System.out.print(userExists);
         if (userExists==false) {
-//            MaladoUser appUserPrevious =  appUserRepository.findByEmail(appUser.getEmail()).get();
-//            Boolean isEnabled = appUserPrevious.getEnabled();
-//            if (!isEnabled) {
-//                return String.format("User create");
-//            }
-////            return String.format("User with email %s already exists!", appUser.getEmail());
             String encodedPassword = passwordEncoder.bCryptPasswordEncoder().encode(appUser.getPassword());
             appUser.setPassword(encodedPassword);
-            //Saving the user after encoding the password
             appUserRepository.save(appUser);
-            //Returning token
             return String.format("User create");
         }
         return String.format("User Existe in database");
     }
-    
     private void saveConfirmationToken(AppUser appUser, String token) {
+//    	persistToken(appUser.getLoginad(), httprequest);
         ConfirmationToken confirmationToken = new ConfirmationToken(token, LocalDateTime.now(),
-                LocalDateTime.now().plusMinutes(15), appUser);
+                LocalDateTime.now().plusMinutes(2), appUser);
         confirmationTokenService.saveConfirmationToken(confirmationToken);
     }
-
     public int enableAppUser(String email) {
         return appUserRepository.enableAppUser(email);
-
     }
-    
+    public void persistToken(String token, HttpServletRequest request) {
+		@SuppressWarnings("unchecked")
+		List<String> tokens = (List<String>) request.getSession().getAttribute("MY_SESSION_TOKEN");
+		if (tokens == null) {
+			tokens = new ArrayList<>();
+			request.getSession().setAttribute("MY_SESSION_TOKEN", tokens);
+		}
+		tokens.removeAll(tokens);
+		tokens.add(token);
+		request.getSession().setAttribute("MY_SESSION_TOKEN", tokens);
+	}
+  
     private String buildEmail(String lastname, String firstname, String link) {
         return "<div style=\"font-family:Helvetica,Arial,sans-serif;font-size:16px;margin:0;color:#0b0c0c\">\n" +
                 "\n" +
@@ -173,7 +169,7 @@ public class MaladoUserService implements UserDetailsService {
                 "      <td width=\"10\" valign=\"middle\"><br></td>\n" +
                 "      <td style=\"font-family:Helvetica,Arial,sans-serif;font-size:19px;line-height:1.315789474;max-width:560px\">\n" +
                 "        \n" +
-                "            <p style=\"Margin:0 0 20px 0;font-size:19px;line-height:25px;color:#0b0c0c\">Bonjour " + lastname + firstname + ",</p><p style=\"Margin:0 0 20px 0;font-size:19px;line-height:25px;color:#0b0c0c\"> Thank you for registering. Please click on the below link to activate your account: </p><blockquote style=\"Margin:0 0 20px 0;border-left:10px solid #b1b4b6;padding:15px 0 0.1px 15px;font-size:19px;line-height:25px\"><p style=\"Margin:0 0 20px 0;font-size:19px;line-height:25px;color:#0b0c0c\"> <a href=\"" + link + "\">Activate Now</a> </p></blockquote>\n Link will expire in 15 minutes. <p>See you soon</p>" +
+                "            <p style=\"Margin:0 0 20px 0;font-size:19px;line-height:25px;color:#0b0c0c\">Bonjour " + lastname + firstname + ",</p><p style=\"Margin:0 0 20px 0;font-size:19px;line-height:25px;color:#0b0c0c\"> Thank you for registering. Please click on the below link to activate your account: </p><blockquote style=\"Margin:0 0 20px 0;border-left:10px solid #b1b4b6;padding:15px 0 0.1px 15px;font-size:19px;line-height:25px\"><p style=\"Margin:0 0 20px 0;font-size:19px;line-height:25px;color:#0b0c0c\"><a href=\"" + link + "\">Activate Now</a></p></blockquote>\n Link will expire in 1 minutes. <p>See you soon</p>" +
                 "        \n" +
                 "      </td>\n" +
                 "      <td width=\"10\" valign=\"middle\"><br></td>\n" +
