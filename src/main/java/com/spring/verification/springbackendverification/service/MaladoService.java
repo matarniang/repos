@@ -133,8 +133,6 @@ public class MaladoService {
 			}
 			catch(Exception e) {
 			  return "";
-			}
-		
+		}
 	}
-    
 }

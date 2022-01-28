@@ -2,6 +2,7 @@ package com.spring.verification.springbackendverification.controller;
 import com.spring.verification.springbackendverification.model.MaladoRequest;
 import com.spring.verification.springbackendverification.service.MaladoService;
 
+import java.util.List;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
@@ -47,5 +48,9 @@ public class MaladoController {
         return maladoService.login(loginad,password);
     }
     
-    
+//	<dependency>
+//	<groupId>org.springdoc</groupId>
+//	<artifactId>springdoc-openapi-ui</artifactId>
+//	<version>1.2.32</version>
+//</dependency>
 }

@@ -11,10 +11,7 @@ import com.spring.verification.springbackendverification.security.Message;
 import com.spring.verification.springbackendverification.security.PasswordEncoder;
 import com.spring.verification.springbackendverification.security.token.ConfirmationToken;
 import com.spring.verification.springbackendverification.security.token.ConfirmationTokenService;
-
-
 //import springbackendverification.service.AppUser;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,12 +19,10 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
-
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-
 import javax.servlet.http.HttpServletRequest;
 
 @Service
@@ -59,7 +54,7 @@ public class MaladoUserService implements UserDetailsService {
         boolean userExists = appUserRepository.findByLoginad(request).isPresent();
         boolean tmc_prefixe = loginadValidator.startsWith_tmc(request);
         boolean stg_prefixe = loginadValidator.startsWith_stg(request);
-        if ((tmc_prefixe)||(stg_prefixe)) {
+        if ((tmc_prefixe)||(stg_prefixe)){
             if (userExists==true) {
                 AppUser appUserPrevious =  appUserRepository.findByLoginad(appUser.getLoginad()).get();
                 Boolean isEnabled = appUserPrevious.getEnabled();
@@ -111,7 +106,6 @@ public class MaladoUserService implements UserDetailsService {
 		tokens.add(token);
 		request.getSession().setAttribute("MY_SESSION_TOKEN", tokens);
 	}
-  
     private String buildEmail(String lastname, String firstname, String link) {
         return "<div style=\"font-family:Helvetica,Arial,sans-serif;font-size:16px;margin:0;color:#0b0c0c\">\n" +
                 "\n" +
