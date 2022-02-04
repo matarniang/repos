@@ -1,9 +1,6 @@
 package com.spring.verification.springbackendverification.service;
-
 import com.spring.verification.springbackendverification.email.EmailSender;
-//import com.orange.sonatel.Malado.Models.AdUser;
 import com.spring.verification.springbackendverification.model.AppUser;
-//import com.spring.verification.springbackendverification.model.RegistrationRequest;
 import com.spring.verification.springbackendverification.repository.AppUserRepository;
 import com.spring.verification.springbackendverification.security.EmailValidator;
 import com.spring.verification.springbackendverification.security.LoginadValidator;
@@ -11,7 +8,6 @@ import com.spring.verification.springbackendverification.security.Message;
 import com.spring.verification.springbackendverification.security.PasswordEncoder;
 import com.spring.verification.springbackendverification.security.token.ConfirmationToken;
 import com.spring.verification.springbackendverification.security.token.ConfirmationTokenService;
-//import springbackendverification.service.AppUser;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -27,7 +23,7 @@ import javax.servlet.http.HttpServletRequest;
 
 @Service
 public class MaladoUserService implements UserDetailsService {
-
+	
     private final AppUserRepository appUserRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailSender emailSender;
@@ -43,6 +39,7 @@ public class MaladoUserService implements UserDetailsService {
         this.emailValidator = emailValidator;
         this.confirmationTokenService = confirmationTokenService;
     }
+    
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
         return appUserRepository.findByEmail(email)
@@ -59,12 +56,12 @@ public class MaladoUserService implements UserDetailsService {
                 AppUser appUserPrevious =  appUserRepository.findByLoginad(appUser.getLoginad()).get();
                 Boolean isEnabled = appUserPrevious.getEnabled();
                     if (!isEnabled) {
-                        boolean isValidEmail = emailValidator.test(appUser.getEmail());
+                        boolean isValidEmail=emailValidator.test(appUser.getEmail());
                     	if (isValidEmail) {
                             String token = UUID.randomUUID().toString();
                             saveConfirmationToken(appUserPrevious, token);    
                             persistToken(token, httprequest);
-                            String link = "http://localhost:8080/api/confirm?token=" + token;
+                            String link = "http://localhost:8080/api/confirm?token="+token;
                             emailSender.sendEmail(appUser.getEmail(), buildEmail(appUser.getLastName(),appUser.getFirstName(), link));
                             return new ResponseEntity(new Message("Verifie your emai",HttpStatus.OK.value()), HttpStatus.OK);
                     	}
@@ -87,7 +84,6 @@ public class MaladoUserService implements UserDetailsService {
         return String.format("User Existe in database");
     }
     private void saveConfirmationToken(AppUser appUser, String token) {
-//    	persistToken(appUser.getLoginad(), httprequest);
         ConfirmationToken confirmationToken = new ConfirmationToken(token, LocalDateTime.now(),
                 LocalDateTime.now().plusMinutes(2), appUser);
         confirmationTokenService.saveConfirmationToken(confirmationToken);
@@ -101,10 +97,13 @@ public class MaladoUserService implements UserDetailsService {
 		if (tokens == null) {
 			tokens = new ArrayList<>();
 			request.getSession().setAttribute("MY_SESSION_TOKEN", tokens);
+			//request.getSession().setAttribute(FindByIndexNameSessionRepository.PRINCIPAL_NAME_INDEX_NAME, token);
+			//return request.getLocalName();
 		}
-		tokens.removeAll(tokens);
+		//tokens.removeAll(tokens);
 		tokens.add(token);
 		request.getSession().setAttribute("MY_SESSION_TOKEN", tokens);
+		//return request.getLocalName();
 	}
     private String buildEmail(String lastname, String firstname, String link) {
         return "<div style=\"font-family:Helvetica,Arial,sans-serif;font-size:16px;margin:0;color:#0b0c0c\">\n" +

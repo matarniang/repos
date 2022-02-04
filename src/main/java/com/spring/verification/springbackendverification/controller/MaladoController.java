@@ -2,22 +2,29 @@ package com.spring.verification.springbackendverification.controller;
 import com.spring.verification.springbackendverification.model.MaladoRequest;
 import com.spring.verification.springbackendverification.service.MaladoService;
 
-import java.util.List;
+//import java.security.Principal;
+//import java.util.Collection;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
+//import javax.websocket.Session;
+
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+//import org.springframework.session.FindByIndexNameSessionRepository;
+//import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping(path="/api/")
 public class MaladoController {
     private final MaladoService maladoService;
+
     @Autowired  
     public MaladoController(MaladoService maladoService) {
         this.maladoService= maladoService;
+        
     }
     @PostMapping(path="loginad")
     public ResponseEntity<?> loginad(@RequestBody String request,HttpServletRequest httprequest) {
@@ -28,10 +35,10 @@ public class MaladoController {
     @PostMapping(path="register")
     public String register(@RequestBody MaladoRequest request) {
         return maladoService.register(request);
-    }
+    } 
     @GetMapping(path="confirm")
-    public ResponseEntity<?> confirm(@RequestParam("token") String token) {
-        return maladoService.confirmToken(token);
+    public ResponseEntity<?> confirm(@RequestParam("token") String token,HttpSession session) {
+        return maladoService.confirmToken(token,session);
     }
     @PostMapping(path="confirmpassword")
     public ResponseEntity<?> confirmPassword(@RequestBody String request,HttpSession session) {
@@ -47,10 +54,5 @@ public class MaladoController {
         String password=object.getString("password");
         return maladoService.login(loginad,password);
     }
-    
-//	<dependency>
-//	<groupId>org.springdoc</groupId>
-//	<artifactId>springdoc-openapi-ui</artifactId>
-//	<version>1.2.32</version>
-//</dependency>
+
 }

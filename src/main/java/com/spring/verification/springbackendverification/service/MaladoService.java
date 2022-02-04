@@ -6,6 +6,8 @@ import com.spring.verification.springbackendverification.model.MaladoRequest;
 import com.spring.verification.springbackendverification.security.EmailValidator;
 import com.spring.verification.springbackendverification.security.LoginadValidator;
 import com.spring.verification.springbackendverification.security.Message;
+import com.spring.verification.springbackendverification.security.MessageSession;
+//import com.spring.verification.springbackendverification.security.MessageSession;
 import com.spring.verification.springbackendverification.security.token.ConfirmationToken;
 import com.spring.verification.springbackendverification.security.token.ConfirmationTokenService;
 import com.spring.verification.springbackendverification.security.PasswordEncoder;
@@ -29,8 +31,9 @@ public class MaladoService {
     private final ConfirmationTokenService confirmTokenService;
     private final AppUserRepository appUserRepository;
     private final LoginadValidator loginadValidator;
+
     public MaladoService(LoginadValidator loginadValidator,AppUserRepository appUserRepository,MaladoUserService appUserService,EmailValidator emailValidator,PasswordEncoder passwordEncoder,ConfirmationTokenService confirmTokenService) {
-        this.loginadValidator = loginadValidator;
+    	this.loginadValidator = loginadValidator;
     	this.appUserService = appUserService;
         this.passwordEncoder= passwordEncoder;
         this.emailValidator = emailValidator;
@@ -57,7 +60,8 @@ public class MaladoService {
     }
     @SuppressWarnings({ "unchecked", "rawtypes" })
 	@Transactional
-    public ResponseEntity<?> confirmToken(String token) {
+    public ResponseEntity<?> confirmToken(String token,HttpSession session) {
+    	
         Optional<ConfirmationToken> confirmToken = confirmTokenService.getToken(token);
         if (confirmToken.isEmpty()) {
             return new ResponseEntity(new Message("Token not found!",HttpStatus.NOT_FOUND.value()), HttpStatus.NOT_FOUND);
@@ -70,8 +74,8 @@ public class MaladoService {
         	return new ResponseEntity(new Message("Token is already expired!",HttpStatus.BAD_REQUEST.value()), HttpStatus.BAD_REQUEST);
         }
         confirmTokenService.setConfirmedAt(token);
-        appUserService.enableAppUser(confirmToken.get().getAppUser().getEmail());
-    	return new ResponseEntity(new Message("Your email is confirmed",HttpStatus.OK.value()), HttpStatus.OK);
+        appUserService.enableAppUser(confirmToken.get().getAppUser().getEmail());    
+    	return new ResponseEntity(new MessageSession("Your email is confirmed",HttpStatus.OK.value(),session.getId()),HttpStatus.OK);
     }    
     @SuppressWarnings({ "rawtypes", "unchecked" })
 	@Transactional
@@ -90,21 +94,17 @@ public class MaladoService {
             	return new ResponseEntity(new Message("Token is already expired!",HttpStatus.OK.value()), HttpStatus.OK);
             }
             if (confirmToken.get().getConfirmedAt()!=null){
-            	//String passwordbase = confirmToken.get().getAppUser().getPassword();
             	AppUser appUser = confirmToken.get().getAppUser();
                 String encodedPassword = passwordEncoder.bCryptPasswordEncoder().encode(password);
                 appUser.setPassword(encodedPassword);
                 appUserRepository.save(appUser);
-            	//if(passwordEncoder.bCryptPasswordEncoder().matches(password,passwordbase)) {
-                return new ResponseEntity(new Message("Welcome to malado",HttpStatus.OK.value()), HttpStatus.OK);
-           // }  	
-               // return new ResponseEntity(new Message("password not found!",HttpStatus.NOT_FOUND.value()), HttpStatus.NOT_FOUND);
+                return new ResponseEntity(new Message("Registration reussie,vous pouvez vous connecter now",HttpStatus.OK.value()), HttpStatus.OK);
                }
             return new ResponseEntity(new Message("Email not confrim",HttpStatus.NOT_FOUND.value()), HttpStatus.NOT_FOUND);
             }
-           return new ResponseEntity(new Message("Session Exprire",HttpStatus.NOT_FOUND.value()), HttpStatus.NOT_FOUND);
+           return new ResponseEntity(new Message("Votre Session a expire",HttpStatus.NOT_FOUND.value()), HttpStatus.NOT_FOUND);
          }
-        return new ResponseEntity(new Message("password != confirmpassword",HttpStatus.NOT_FOUND.value()), HttpStatus.NOT_FOUND);
+        return new ResponseEntity(new Message("les mots de passe saisis ne correspondent pas",HttpStatus.NOT_FOUND.value()), HttpStatus.NOT_FOUND);
    } 
     @SuppressWarnings({ "unchecked", "rawtypes" })
 	public ResponseEntity<?> login(String loginad,String password){
@@ -122,9 +122,8 @@ public class MaladoService {
            }
             return new ResponseEntity(new Message(String.format("%s does not existe in database",loginad),HttpStatus.NOT_FOUND.value()), HttpStatus.NOT_FOUND);
         }
-        return new ResponseEntity(new Message( String.format("Please verif your loginAD format"),HttpStatus.NOT_ACCEPTABLE.value()), HttpStatus.NOT_ACCEPTABLE);
+        return new ResponseEntity(new Message( String.format("Please verifie your loginAD format"),HttpStatus.NOT_ACCEPTABLE.value()), HttpStatus.NOT_ACCEPTABLE);
     }
-    
 	public String GetToken(HttpSession session) {
 		@SuppressWarnings("unchecked")
 		List<String> messages = (List<String>) session.getAttribute("MY_SESSION_TOKEN");
@@ -135,4 +134,22 @@ public class MaladoService {
 			  return "";
 		}
 	}
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	public ResponseEntity<?> VerifEnablead(String token){
+        Optional<ConfirmationToken> confirmToken = confirmTokenService.getToken(token);
+        if (confirmToken.isEmpty()) {
+            return new ResponseEntity(new Message("Token not found!",HttpStatus.NOT_FOUND.value()), HttpStatus.NOT_FOUND);
+        }
+        LocalDateTime expiresAt = confirmToken.get().getExpiresAt();
+        if (expiresAt.isBefore(LocalDateTime.now())) {
+        	return new ResponseEntity(new Message("Token is already expired!",HttpStatus.BAD_REQUEST.value()), HttpStatus.BAD_REQUEST);
+        }
+        AppUser appUser = confirmToken.get().getAppUser();
+        Boolean isEnabled = appUser.getEnabled();
+        if (isEnabled) {
+        	return new ResponseEntity(new Message(" Enable true ",HttpStatus.OK.value()), HttpStatus.OK);
+        }
+    	return new ResponseEntity(new Message("Email not confirmed ",HttpStatus.OK.value()), HttpStatus.OK);
+	}
+
 }
