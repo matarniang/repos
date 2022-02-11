@@ -16,10 +16,8 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
-import javax.servlet.http.HttpServletRequest;
 
 @Service
 public class MaladoUserService implements UserDetailsService {
@@ -31,8 +29,9 @@ public class MaladoUserService implements UserDetailsService {
     private final LoginadValidator loginadValidator;
     private final ConfirmationTokenService confirmationTokenService;
     @Autowired
-    public MaladoUserService(LoginadValidator loginadValidator,AppUserRepository appUserRepository,EmailSender emailSender,PasswordEncoder passwordEncoder,EmailValidator emailValidator, ConfirmationTokenService confirmationTokenService) {
-        this.loginadValidator =loginadValidator;
+    public MaladoUserService(ConfirmationTokenService confirmTokenService,LoginadValidator loginadValidator,AppUserRepository appUserRepository,EmailSender emailSender,PasswordEncoder passwordEncoder,EmailValidator emailValidator, ConfirmationTokenService confirmationTokenService) {
+       
+    	this.loginadValidator =loginadValidator;
     	this.appUserRepository = appUserRepository;
         this.emailSender= emailSender;
         this.passwordEncoder = passwordEncoder;
@@ -46,7 +45,7 @@ public class MaladoUserService implements UserDetailsService {
                                 .orElseThrow(() -> new UsernameNotFoundException(String.format("User with email %s not found", email)));
     }
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	public ResponseEntity<?> loginUpUser(String request, HttpServletRequest httprequest){
+	public ResponseEntity<?> loginUpUser(String request){
     	AppUser appUser = appUserRepository.getUser(request);
         boolean userExists = appUserRepository.findByLoginad(request).isPresent();
         boolean tmc_prefixe = loginadValidator.startsWith_tmc(request);
@@ -60,7 +59,6 @@ public class MaladoUserService implements UserDetailsService {
                     	if (isValidEmail) {
                             String token = UUID.randomUUID().toString();
                             saveConfirmationToken(appUserPrevious, token);    
-                            persistToken(token, httprequest);
                             String link = "http://localhost:8080/api/confirm?token="+token;
                             emailSender.sendEmail(appUser.getEmail(), buildEmail(appUser.getLastName(),appUser.getFirstName(), link));
                             return new ResponseEntity(new Message("Verifie your emai",HttpStatus.OK.value()), HttpStatus.OK);
@@ -91,20 +89,21 @@ public class MaladoUserService implements UserDetailsService {
     public int enableAppUser(String email) {
         return appUserRepository.enableAppUser(email);
     }
-    public void persistToken(String token, HttpServletRequest request) {
-		@SuppressWarnings("unchecked")
-		List<String> tokens = (List<String>) request.getSession().getAttribute("MY_SESSION_TOKEN");
-		if (tokens == null) {
-			tokens = new ArrayList<>();
-			request.getSession().setAttribute("MY_SESSION_TOKEN", tokens);
-			//request.getSession().setAttribute(FindByIndexNameSessionRepository.PRINCIPAL_NAME_INDEX_NAME, token);
-			//return request.getLocalName();
+    
+	public Boolean TokenVerification(String token){
+		Optional<ConfirmationToken> confirmToken=confirmationTokenService.getToken(token);
+		AppUser appUser = confirmToken.get().getAppUser();
+		LocalDateTime expiresAt=confirmToken.get().getExpiresAt();
+		if (expiresAt.isBefore(LocalDateTime.now())) {
+			String newtoken = UUID.randomUUID().toString();
+            saveConfirmationToken(appUser, newtoken);    
+            String link = "http://localhost:8080/api/confirm?token="+newtoken;
+            emailSender.sendEmail(appUser.getEmail(), buildEmail(appUser.getLastName(),appUser.getFirstName(), link));
+			return true;
 		}
-		//tokens.removeAll(tokens);
-		tokens.add(token);
-		request.getSession().setAttribute("MY_SESSION_TOKEN", tokens);
-		//return request.getLocalName();
+		return false;
 	}
+
     private String buildEmail(String lastname, String firstname, String link) {
         return "<div style=\"font-family:Helvetica,Arial,sans-serif;font-size:16px;margin:0;color:#0b0c0c\">\n" +
                 "\n" +

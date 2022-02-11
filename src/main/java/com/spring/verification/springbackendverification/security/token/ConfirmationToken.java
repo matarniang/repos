@@ -23,8 +23,7 @@ public class ConfirmationToken {
 
     private LocalDateTime confirmedAt;
     
-    //private String SessionID;
-
+    
 	@ManyToOne
     @JoinColumn(nullable = false,
                 name = "app_user_id")
@@ -38,7 +37,7 @@ public class ConfirmationToken {
         this.createdAt = createdAt;
         this.expiresAt = expiresAt;
         this.appUser = appUser;
-       // this.SessionID = SessionID;
+         
     }
 
     public Long getId() {
@@ -57,14 +56,6 @@ public class ConfirmationToken {
         this.token = token;
     }
     
-//    public String getSessionID() {
-//		return SessionID;
-//	}
-//
-//	public void setSessionID(String sessionID) {
-//		SessionID = sessionID;
-//	}
-
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
