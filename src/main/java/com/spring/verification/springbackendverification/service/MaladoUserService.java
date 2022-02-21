@@ -20,8 +20,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Service
-public class MaladoUserService implements UserDetailsService {
-	
+public class MaladoUserService implements UserDetailsService {	
     private final AppUserRepository appUserRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailSender emailSender;
@@ -30,7 +29,6 @@ public class MaladoUserService implements UserDetailsService {
     private final ConfirmationTokenService confirmationTokenService;
     @Autowired
     public MaladoUserService(ConfirmationTokenService confirmTokenService,LoginadValidator loginadValidator,AppUserRepository appUserRepository,EmailSender emailSender,PasswordEncoder passwordEncoder,EmailValidator emailValidator, ConfirmationTokenService confirmationTokenService) {
-       
     	this.loginadValidator =loginadValidator;
     	this.appUserRepository = appUserRepository;
         this.emailSender= emailSender;
@@ -103,7 +101,40 @@ public class MaladoUserService implements UserDetailsService {
 		}
 		return false;
 	}
-
+	
+	//@SuppressWarnings({ "rawtypes", "unchecked" })
+	public Boolean forgotPassword(String email) {
+		boolean isValidEmail = emailValidator.test(email);    
+        if (isValidEmail) {
+        	boolean userExists = appUserRepository.findByEmail(email).isPresent();
+        	if (userExists){
+            	AppUser appUser = appUserRepository.getUserEmail(email);
+            	if ((appUser.getEnabled()==true) && (appUser.getPassword()!=null)) {
+            		appUser.setEnabled(false);
+            		appUser.setPassword(null);
+            		appUserRepository.save(appUser);
+        			String newtoken = UUID.randomUUID().toString();
+                    saveConfirmationToken(appUser, newtoken);    
+                    String link = "http://localhost:8080/api/confirm?token="+newtoken;
+                    emailSender.sendEmail(email, buildEmail(appUser.getLastName(),appUser.getFirstName(), link));
+                    return true;
+//                    return new ResponseEntity(new Message("Un email vous a ete envoyer",HttpStatus.OK.value()), HttpStatus.OK);
+            	}
+            	else if (appUser.getEnabled()==false) {
+//            		return new ResponseEntity(new Message("Vous etez pas encore inscrire",HttpStatus.FOUND.value()), HttpStatus.FOUND);
+            	    return false;
+            	}
+            	else if ((appUser.getEnabled()==true) && (appUser.getPassword()==null)){
+//            		return new ResponseEntity(new Message("Terminer l'inscription",HttpStatus.FOUND.value()), HttpStatus.FOUND);
+                    return false;            	
+            	}
+        	}
+        	return false;
+//        	return new ResponseEntity(new Message("L'utilisateur n'existe pas dans la base",HttpStatus.FOUND.value()), HttpStatus.FOUND);
+        }
+//        return new ResponseEntity(new Message("l'email n'est pas valide ",HttpStatus.FOUND.value()), HttpStatus.FOUND);
+        return false;
+	}
     private String buildEmail(String lastname, String firstname, String link) {
         return "<div style=\"font-family:Helvetica,Arial,sans-serif;font-size:16px;margin:0;color:#0b0c0c\">\n" +
                 "\n" +

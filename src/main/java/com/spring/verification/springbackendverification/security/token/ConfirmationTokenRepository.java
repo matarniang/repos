@@ -20,7 +20,5 @@ public interface ConfirmationTokenRepository extends JpaRepository<ConfirmationT
     @Modifying
     @Query("UPDATE ConfirmationToken c SET c.confirmedAt = ?2 WHERE c.token = ?1")
     int updateConfirmedAt(String token, LocalDateTime localDateTime);
-//    
-//    @Query("select min(createdAt) from ConfirmationToken where app_user_id= ?1")
-//	ConfirmationToken getMin(Long app_user_id);
+
 }
