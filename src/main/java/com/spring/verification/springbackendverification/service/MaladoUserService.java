@@ -1,7 +1,9 @@
 package com.spring.verification.springbackendverification.service;
 import com.spring.verification.springbackendverification.email.EmailSender;
 import com.spring.verification.springbackendverification.model.AppUser;
+import com.spring.verification.springbackendverification.model.Demande;
 import com.spring.verification.springbackendverification.repository.AppUserRepository;
+import com.spring.verification.springbackendverification.repository.DemandeRepository;
 import com.spring.verification.springbackendverification.security.EmailValidator;
 import com.spring.verification.springbackendverification.security.LoginadValidator;
 import com.spring.verification.springbackendverification.security.Message;
@@ -22,13 +24,15 @@ import java.util.UUID;
 @Service
 public class MaladoUserService implements UserDetailsService {	
     private final AppUserRepository appUserRepository;
+    private final DemandeRepository demandeRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailSender emailSender;
     private final EmailValidator emailValidator;
     private final LoginadValidator loginadValidator;
     private final ConfirmationTokenService confirmationTokenService;
     @Autowired
-    public MaladoUserService(ConfirmationTokenService confirmTokenService,LoginadValidator loginadValidator,AppUserRepository appUserRepository,EmailSender emailSender,PasswordEncoder passwordEncoder,EmailValidator emailValidator, ConfirmationTokenService confirmationTokenService) {
+    public MaladoUserService(DemandeRepository demandeRepository,ConfirmationTokenService confirmTokenService,LoginadValidator loginadValidator,AppUserRepository appUserRepository,EmailSender emailSender,PasswordEncoder passwordEncoder,EmailValidator emailValidator, ConfirmationTokenService confirmationTokenService) {
+    	this.demandeRepository = demandeRepository;
     	this.loginadValidator =loginadValidator;
     	this.appUserRepository = appUserRepository;
         this.emailSender= emailSender;
@@ -79,6 +83,22 @@ public class MaladoUserService implements UserDetailsService {
         }
         return String.format("User Existe in database");
     }
+    
+    public String MaladoDemande(Demande demande) {
+    	AppUser appUser = appUserRepository.getUser(demande.getLogin());
+        boolean userExists = appUserRepository.findByLoginad(demande.getLogin()).isPresent();
+    	
+        if (userExists) {
+//            String encodedPassword = passwordEncoder.bCryptPasswordEncoder().encode(demande.getPassword());
+//            demande.setPassword(encodedPassword);
+            demande.setAppUser(appUser);
+            demandeRepository.save(demande);
+            return String.format("Demande create");
+        }
+        return String.format("login n'existe pas");
+    }
+    
+    
     private void saveConfirmationToken(AppUser appUser, String token) {
         ConfirmationToken confirmationToken = new ConfirmationToken(token, LocalDateTime.now(),
                 LocalDateTime.now().plusMinutes(2), appUser);
@@ -102,7 +122,7 @@ public class MaladoUserService implements UserDetailsService {
 		return false;
 	}
 	
-	//@SuppressWarnings({ "rawtypes", "unchecked" })
+//	@SuppressWarnings({ "rawtypes", "unchecked" })
 	public Boolean forgotPassword(String email) {
 		boolean isValidEmail = emailValidator.test(email);    
         if (isValidEmail) {

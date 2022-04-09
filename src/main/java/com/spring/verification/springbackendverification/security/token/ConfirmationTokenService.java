@@ -1,7 +1,5 @@
 package com.spring.verification.springbackendverification.security.token;
-
 import org.springframework.stereotype.Service;
-
 import java.time.LocalDateTime;
 import java.util.Optional;
 
@@ -17,7 +15,6 @@ public class ConfirmationTokenService {
     public void saveConfirmationToken(ConfirmationToken token) {
         confirmationTokenRepository.save(token);
     }
-
     public Optional<ConfirmationToken> getToken(String token) {
         return confirmationTokenRepository.findByToken(token);
     }

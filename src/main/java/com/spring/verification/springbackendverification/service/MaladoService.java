@@ -1,5 +1,7 @@
 package com.spring.verification.springbackendverification.service;
 import com.spring.verification.springbackendverification.model.AppUser;
+import com.spring.verification.springbackendverification.model.Demande;
+import com.spring.verification.springbackendverification.model.DemandeRequest;
 import com.spring.verification.springbackendverification.model.MaladoUserRole;
 import com.spring.verification.springbackendverification.repository.AppUserRepository;
 import com.spring.verification.springbackendverification.model.MaladoRequest;
@@ -13,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
+import java.util.Date;
 import java.util.Optional;
 
 @Service
@@ -46,6 +49,23 @@ public class MaladoService {
             return CreateNewUser;
         } else {
             return String.format("Email %s, not valid", request.getEmail());
+        }
+    }
+    public String demande(DemandeRequest request) {
+//    	AppUser appUser = appUserRepository.getUser(request.getLoginad());
+        boolean userExists = appUserRepository.findByLoginad(request.getLogin()).isPresent();
+//        boolean isValidEmail = emailValidator.test(request.getEmail());
+        if (userExists) {
+    	
+            String CreateNewDemande = appUserService.MaladoDemande(new Demande(
+            		request.getAction(),
+                    request.getApplication(),
+                    request.getLogin(),
+                    request.getPassword()           
+                    ));
+            return CreateNewDemande;
+        } else {
+            return String.format("utilisateur %s, n'existe pas", request.getLogin());
         }
     }
     @SuppressWarnings({ "unchecked", "rawtypes" })
@@ -117,5 +137,10 @@ public class MaladoService {
         appUser.setPassword(encodedPassword);
         appUserRepository.save(appUser);
 		return new ResponseEntity(new Message("Welcome to malado",HttpStatus.OK.value()), HttpStatus.OK);
+	}
+	
+	public AppUser GetUser(String loginad) {
+		AppUser appUser = appUserRepository.getUser(loginad);
+		return appUser;
 	}
 }
